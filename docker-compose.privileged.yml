@@ -1,0 +1,30 @@
+# Docker Compose override for WireGuard integration
+# 
+# This adds host network access and WireGuard capabilities
+# Allows the container to actually add peers to the host WireGuard
+#
+# Usage:
+#   docker-compose -f docker-compose.yml -f docker-compose.privileged.yml up -d
+
+version: '3.8'
+
+services:
+  wireguard-qr-manager:
+    # Use host network for WireGuard access
+    network_mode: host
+    
+    # Required capabilities for wg commands
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    
+    # Mount host WireGuard config
+    volumes:
+      - wg_data:/app/data
+      - /etc/wireguard:/etc/wireguard:rw
+    
+    # Run as root for wg commands
+    user: root
+    
+    # Override port mapping (not needed with host network)
+    ports: []

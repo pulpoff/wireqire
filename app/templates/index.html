@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>WireGuard QR</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0f0f0f;
+            color: #fff;
+            min-height: 100vh;
+        }
+        
+        header {
+            background: #1a1a1a;
+            padding: 12px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            border-bottom: 1px solid #333;
+        }
+        
+        .logo {
+            font-weight: 600;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .logo svg { width: 20px; height: 20px; fill: #e94560; }
+        
+        .btn {
+            background: #e94560;
+            color: #fff;
+            border: none;
+            padding: 10px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s;
+        }
+        
+        .btn:hover { background: #d63d56; }
+        .btn:active { transform: scale(0.98); }
+        .btn-outline { background: transparent; border: 1px solid #444; }
+        .btn-outline:hover { background: #222; }
+        
+        main { padding: 16px; max-width: 900px; margin: 0 auto; }
+        
+        /* Stats */
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .stat {
+            background: #1a1a1a;
+            padding: 12px;
+            border-radius: 12px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .stat:hover { background: #222; }
+        .stat-value { font-size: 20px; font-weight: 700; color: #e94560; }
+        .stat-value.green { color: #28a745; }
+        .stat-label { font-size: 10px; color: #666; margin-top: 2px; text-transform: uppercase; }
+        
+        /* Connected list */
+        .connected-list {
+            background: #1a1a1a;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            overflow: hidden;
+            display: none;
+        }
+        
+        .connected-list.show { display: block; }
+        
+        .connected-header {
+            padding: 12px 16px;
+            background: #222;
+            font-weight: 600;
+            font-size: 13px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .connected-item {
+            padding: 10px 16px;
+            border-top: 1px solid #333;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 13px;
+        }
+        
+        .connected-item .name { font-weight: 500; }
+        .connected-item .meta { color: #888; font-size: 11px; }
+        .pulse { width: 8px; height: 8px; background: #28a745; border-radius: 50%; animation: pulse 2s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        
+        /* Cards */
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(165px, 1fr));
+            gap: 12px;
+        }
+        
+        .card {
+            background: #1a1a1a;
+            border-radius: 16px;
+            padding: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+        }
+        
+        .card:hover { background: #222; transform: translateY(-2px); }
+        .card:active { transform: scale(0.98); }
+        .card.disabled { opacity: 0.5; }
+        .card.disabled:hover { opacity: 0.7; }
+        
+        .card-qr {
+            background: #fff;
+            border-radius: 10px;
+            padding: 8px;
+            margin-bottom: 10px;
+            aspect-ratio: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+        
+        .card-qr svg { width: 55%; height: 55%; fill: #ddd; }
+        
+        .card-name {
+            font-weight: 600;
+            font-size: 13px;
+            margin-bottom: 2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .card-ip {
+            font-family: monospace;
+            font-size: 10px;
+            color: #888;
+            margin-bottom: 6px;
+        }
+        
+        .card-stats {
+            display: flex;
+            gap: 8px;
+            font-size: 9px;
+            color: #666;
+            margin-bottom: 6px;
+        }
+        
+        .card-stats span {
+            background: #252525;
+            padding: 3px 6px;
+            border-radius: 4px;
+        }
+        
+        .card-stats .connected { background: rgba(40, 167, 69, 0.2); color: #28a745; }
+        
+        .card-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 9px;
+            color: #555;
+        }
+        
+        .card-actions { display: flex; gap: 4px; }
+        
+        .card-btn {
+            width: 26px;
+            height: 26px;
+            border-radius: 6px;
+            border: none;
+            background: #333;
+            color: #888;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+        
+        .card-btn:hover { background: #444; color: #fff; }
+        .card-btn.danger:hover { background: #dc3545; }
+        
+        .card-btn.toggle-on {
+            background: #28a745;
+            color: #fff;
+        }
+        
+        .card-btn.toggle-off {
+            background: #dc3545;
+            color: #fff;
+        }
+        
+        .status-badge {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #28a745;
+            border: 2px solid #1a1a1a;
+        }
+        
+        .status-badge.inactive { background: #dc3545; }
+        .status-badge.connected { background: #28a745; animation: pulse 2s infinite; }
+        
+        .disabled-label {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(220, 53, 69, 0.9);
+            color: #fff;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+            z-index: 5;
+        }
+        
+        .card-add {
+            border: 2px dashed #333;
+            background: transparent;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 200px;
+            color: #666;
+        }
+        
+        .card-add:hover { border-color: #e94560; color: #e94560; background: rgba(233, 69, 96, 0.05); }
+        .card-add svg { width: 36px; height: 36px; margin-bottom: 8px; fill: currentColor; }
+        
+        .empty { grid-column: 1 / -1; text-align: center; padding: 40px 20px; color: #666; }
+        
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.9);
+            z-index: 1000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+        }
+        
+        .modal-overlay.show { display: flex; }
+        
+        .modal {
+            background: #1a1a1a;
+            border-radius: 20px;
+            width: 100%;
+            max-width: 360px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        
+        .modal-header {
+            padding: 16px;
+            border-bottom: 1px solid #333;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .modal-title { font-size: 16px; font-weight: 600; }
+        
+        .modal-close {
+            width: 32px; height: 32px;
+            border-radius: 50%;
+            border: none;
+            background: #333;
+            color: #fff;
+            cursor: pointer;
+            font-size: 20px;
+            line-height: 1;
+        }
+        
+        .modal-body { padding: 20px; }
+        
+        .modal-footer {
+            padding: 16px;
+            border-top: 1px solid #333;
+            display: flex;
+            gap: 10px;
+        }
+        
+        .modal-footer .btn { flex: 1; justify-content: center; }
+        
+        .qr-box {
+            background: #fff;
+            padding: 20px;
+            border-radius: 16px;
+            text-align: center;
+            margin-bottom: 16px;
+        }
+        
+        .qr-box img { width: 100%; max-width: 220px; height: auto; }
+        
+        .qr-info {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 12px;
+            font-size: 11px;
+            color: #888;
+            margin-bottom: 16px;
+        }
+        
+        .qr-info span { background: #252525; padding: 4px 10px; border-radius: 6px; }
+        .qr-info .online { background: rgba(40, 167, 69, 0.2); color: #28a745; }
+        
+        .config-box {
+            background: #0f0f0f;
+            border-radius: 10px;
+            padding: 12px;
+            font-family: monospace;
+            font-size: 9px;
+            color: #666;
+            white-space: pre-wrap;
+            word-break: break-all;
+            max-height: 100px;
+            overflow-y: auto;
+        }
+        
+        .form-group { margin-bottom: 16px; }
+        .form-label { display: block; font-size: 13px; color: #888; margin-bottom: 6px; }
+        
+        .form-input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #333;
+            border-radius: 10px;
+            background: #0f0f0f;
+            color: #fff;
+            font-size: 14px;
+        }
+        
+        .form-input:focus { outline: none; border-color: #e94560; }
+        .form-check { display: flex; align-items: center; gap: 10px; font-size: 13px; color: #888; }
+        .form-check input { width: 18px; height: 18px; accent-color: #e94560; }
+        
+        .loading {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.8);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+        }
+        
+        .loading.show { display: flex; }
+        
+        .spinner {
+            width: 40px; height: 40px;
+            border: 3px solid #333;
+            border-top-color: #e94560;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin { to { transform: rotate(360deg); } }
+        
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: #333;
+            padding: 12px 24px;
+            border-radius: 10px;
+            font-size: 14px;
+            z-index: 3000;
+            transition: transform 0.3s;
+        }
+        
+        .toast.show { transform: translateX(-50%) translateY(0); }
+        .toast.success { background: #28a745; }
+        .toast.error { background: #dc3545; }
+        
+        @media (max-width: 500px) {
+            .stats { grid-template-columns: repeat(2, 1fr); }
+        }
+        
+        @media (min-width: 600px) {
+            .cards { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 14px; }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="logo">
+            <svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 6c1.4 0 2.8 1.1 2.8 2.5V11c.6.3 1 .9 1 1.5v3c0 1-.8 1.5-1.8 1.5h-4c-1 0-1.8-.5-1.8-1.5v-3c0-.6.4-1.2 1-1.5V9.5C9.2 8.1 10.6 7 12 7zm0 1.2c-.8 0-1.5.7-1.5 1.5v1.3h3V9.7c0-.8-.7-1.5-1.5-1.5z"/></svg>
+            WG QR
+        </div>
+        <button class="btn btn-outline" onclick="refreshPage()" style="margin-right:8px" title="Refresh">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17.65 6.35A7.958 7.958 0 0012 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0112 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
+        </button>
+        <button class="btn" onclick="showNewModal()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+            New
+        </button>
+    </header>
+    
+    <main>
+        <div class="stats">
+            <div class="stat">
+                <div class="stat-value">{{ peers|length }}</div>
+                <div class="stat-label">Total</div>
+            </div>
+            <div class="stat" onclick="toggleConnectedList()">
+                <div class="stat-value green" id="connectedCount">{{ connected_count }}</div>
+                <div class="stat-label">Online</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value">{{ peers|selectattr('is_active')|list|length }}</div>
+                <div class="stat-label">Enabled</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value">{{ peers|map(attribute='usage_count')|sum }}</div>
+                <div class="stat-label">Scans</div>
+            </div>
+        </div>
+        
+        <div style="text-align:center;font-size:10px;color:#444;margin-bottom:12px">
+            Updated: <span id="lastUpdate">{{ now }}</span>
+            <span style="margin-left:8px;cursor:pointer;color:#666" onclick="refreshPage()">↻ refresh</span>
+        </div>
+        
+        <!-- Connected peers list -->
+        <div class="connected-list" id="connectedList">
+            <div class="connected-header">
+                <span>🟢 Currently Connected</span>
+                <span id="connectedListCount">0</span>
+            </div>
+            <div id="connectedItems">
+                {% for peer in peers %}
+                    {% if peer.is_connected %}
+                    <div class="connected-item">
+                        <div>
+                            <div class="name">{{ peer.name or 'Peer #' ~ peer.id }}</div>
+                            <div class="meta">{{ peer.ip_address }} · ↓{{ peer.rx_formatted }} ↑{{ peer.tx_formatted }}</div>
+                        </div>
+                        <div class="pulse"></div>
+                    </div>
+                    {% endif %}
+                {% endfor %}
+            </div>
+        </div>
+        
+        <div class="cards">
+            <div class="card card-add" onclick="showNewModal()">
+                <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+                <span>Add Peer</span>
+            </div>
+            
+            {% for peer in peers %}
+            <div class="card {{ 'disabled' if not peer.is_active else '' }}" onclick="showQR({{ peer.id }})">
+                <div class="status-badge {{ 'connected' if peer.is_connected else ('inactive' if not peer.is_active else '') }}"></div>
+                <div class="card-qr">
+                    {% if not peer.is_active %}<div class="disabled-label">Disabled</div>{% endif %}
+                    <svg viewBox="0 0 24 24"><path d="M3 11h8V3H3v8zm2-6h4v4H5V5zm8-2v8h8V3h-8zm6 6h-4V5h4v4zM3 21h8v-8H3v8zm2-6h4v4H5v-4zm13 2h-2v2h2v2h2v-4h2v-2h-4v2zm0-2v-2h2v2h-2zm-4 4h2v4h-2v-4zm4 2h2v2h-2v-2zm2-8h2v2h-2v-2z"/></svg>
+                </div>
+                <div class="card-name">{{ peer.name or 'Peer #' ~ peer.id }}</div>
+                <div class="card-ip">{{ peer.ip_address }}</div>
+                <div class="card-stats">
+                    {% if peer.is_connected %}
+                    <span class="connected">● Online</span>
+                    {% endif %}
+                    <span>↓{{ peer.rx_formatted }}</span>
+                    <span>↑{{ peer.tx_formatted }}</span>
+                </div>
+                <div class="card-meta">
+                    <span>{{ peer.last_handshake_ago }}</span>
+                    <div class="card-actions" onclick="event.stopPropagation()">
+                        <button class="card-btn {{ 'toggle-on' if peer.is_active else 'toggle-off' }}" onclick="togglePeer({{ peer.id }})" title="{{ 'Enabled - Click to disable' if peer.is_active else 'Disabled - Click to enable' }}">
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M13 3h-2v10h2V3zm4.83 2.17l-1.42 1.42C17.99 7.86 19 9.81 19 12c0 3.87-3.13 7-7 7s-7-3.13-7-7c0-2.19 1.01-4.14 2.58-5.42L6.17 5.17C4.23 6.82 3 9.26 3 12c0 4.97 4.03 9 9 9s9-4.03 9-9c0-2.74-1.23-5.18-3.17-6.83z"/></svg>
+                        </button>
+                        <button class="card-btn danger" onclick="deletePeer({{ peer.id }})" title="Delete">
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+            
+            {% if not peers %}
+            <div class="empty"><p>No peers yet. Tap "Add Peer" to create one.</p></div>
+            {% endif %}
+        </div>
+    </main>
+    
+    <!-- New Peer Modal -->
+    <div class="modal-overlay" id="newModal">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="modal-title">New Peer</div>
+                <button class="modal-close" onclick="closeModal('newModal')">&times;</button>
+            </div>
+            <form id="newPeerForm" onsubmit="createPeer(event)">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label class="form-label">Name (optional)</label>
+                        <input type="text" class="form-input" name="name" placeholder="e.g. My Phone">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-check">
+                            <input type="checkbox" name="use_preshared_key" checked>
+                            <span>Use preshared key</span>
+                        </label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline" onclick="closeModal('newModal')">Cancel</button>
+                    <button type="submit" class="btn">Create</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- QR Modal -->
+    <div class="modal-overlay" id="qrModal">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="modal-title" id="qrTitle">Peer</div>
+                <button class="modal-close" onclick="closeModal('qrModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="qr-box">
+                    <img id="qrImage" src="" alt="QR">
+                </div>
+                <div class="qr-info">
+                    <span id="qrStatus">Offline</span>
+                    <span>IP: <span id="qrIp"></span></span>
+                    <span>↓<span id="qrRx"></span></span>
+                    <span>↑<span id="qrTx"></span></span>
+                </div>
+                <div class="config-box" id="qrConfig"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline" onclick="copyConfig()">Copy</button>
+                <button class="btn" onclick="downloadConfig()">Download</button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="loading" id="loading"><div class="spinner"></div></div>
+    <div class="toast" id="toast"></div>
+    
+    <script>
+        let currentConfig = '', currentName = '';
+        
+        const $ = id => document.getElementById(id);
+        const show = (el, v) => el.classList.toggle('show', v);
+        
+        function showLoading(v) { show($('loading'), v); }
+        
+        function showToast(msg, type = '') {
+            const t = $('toast');
+            t.textContent = msg;
+            t.className = 'toast show ' + type;
+            setTimeout(() => t.classList.remove('show'), 2500);
+        }
+        
+        function showNewModal() { show($('newModal'), true); }
+        function closeModal(id) { show($(id), false); }
+        
+        function toggleConnectedList() {
+            const list = $('connectedList');
+            list.classList.toggle('show');
+        }
+        
+        async function createPeer(e) {
+            e.preventDefault();
+            showLoading(true);
+            
+            const form = e.target;
+            const fd = new FormData(form);
+            if (!form.use_preshared_key.checked) fd.set('use_preshared_key', 'false');
+            
+            try {
+                const res = await fetch('/api/peers', { method: 'POST', body: fd });
+                if (!res.ok) throw new Error((await res.json()).detail);
+                const peer = await res.json();
+                closeModal('newModal');
+                form.reset();
+                showToast('Created!', 'success');
+                setTimeout(() => showQR(peer.id), 300);
+                setTimeout(() => location.reload(), 800);
+            } catch (err) {
+                showToast(err.message, 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+        
+        async function showQR(id) {
+            showLoading(true);
+            try {
+                const res = await fetch(`/api/peers/${id}`);
+                if (!res.ok) throw new Error('Failed');
+                const p = await res.json();
+                
+                $('qrTitle').textContent = p.name || `Peer #${p.id}`;
+                $('qrImage').src = `data:image/png;base64,${p.qr_code}`;
+                $('qrIp').textContent = p.ip_address;
+                $('qrRx').textContent = p.rx_formatted;
+                $('qrTx').textContent = p.tx_formatted;
+                $('qrConfig').textContent = p.config;
+                
+                const statusEl = $('qrStatus');
+                if (p.is_connected) {
+                    statusEl.textContent = '● Online';
+                    statusEl.className = 'online';
+                } else {
+                    statusEl.textContent = 'Offline';
+                    statusEl.className = '';
+                }
+                
+                currentConfig = p.config;
+                currentName = p.name || `peer-${p.id}`;
+                
+                show($('qrModal'), true);
+            } catch (err) {
+                showToast(err.message, 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+        
+        async function copyConfig() {
+            try {
+                await navigator.clipboard.writeText(currentConfig);
+            } catch {
+                const t = document.createElement('textarea');
+                t.value = currentConfig;
+                document.body.appendChild(t);
+                t.select();
+                document.execCommand('copy');
+                document.body.removeChild(t);
+            }
+            showToast('Copied!', 'success');
+        }
+        
+        function downloadConfig() {
+            const a = document.createElement('a');
+            const blob = new Blob([currentConfig], { type: 'application/octet-stream' });
+            a.href = URL.createObjectURL(blob);
+            a.download = `${currentName}.conf`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(a.href);
+            showToast('Downloaded!', 'success');
+        }
+        
+        async function togglePeer(id) {
+            if (!confirm('Toggle peer?')) return;
+            showLoading(true);
+            try {
+                await fetch(`/api/peers/${id}/toggle`, { method: 'POST' });
+                showToast('Updated!', 'success');
+                setTimeout(() => location.reload(), 500);
+            } catch { showToast('Failed', 'error'); }
+            finally { showLoading(false); }
+        }
+        
+        async function deletePeer(id) {
+            if (!confirm('Delete peer?')) return;
+            showLoading(true);
+            try {
+                await fetch(`/api/peers/${id}`, { method: 'DELETE' });
+                showToast('Deleted!', 'success');
+                setTimeout(() => location.reload(), 500);
+            } catch { showToast('Failed', 'error'); }
+            finally { showLoading(false); }
+        }
+        
+        // Auto-refresh page every 15s for live status
+        let refreshInterval = setInterval(() => {
+            fetch('/api/stats').then(r => r.json()).then(data => {
+                // Update counter
+                const currentCount = parseInt($('connectedCount').textContent);
+                if (data.connected_count !== currentCount) {
+                    // Status changed, reload page
+                    location.reload();
+                }
+            }).catch(() => {});
+        }, 15000);
+        
+        // Manual refresh
+        function refreshPage() {
+            showLoading(true);
+            location.reload();
+        }
+        
+        document.querySelectorAll('.modal-overlay').forEach(m => {
+            m.onclick = e => { if (e.target === m) closeModal(m.id); };
+        });
+        document.onkeydown = e => { if (e.key === 'Escape') document.querySelectorAll('.modal-overlay.show').forEach(m => closeModal(m.id)); };
+    </script>
+</body>
+</html>
