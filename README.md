@@ -16,14 +16,9 @@ A FastAPI web service for generating and managing WireGuard VPN peer configurati
 - **HTTPS Ready** - Nginx reverse proxy configuration included
 - **Multi-User Auth** - Basic authentication for multiple users
 
-## Screenshots
+## Screenshot
 
-The interface shows:
-- Stats bar: Total peers, Online count, Enabled count, Scan count
-- Card grid with QR placeholder, name, IP, transfer stats, last seen
-- Green/Red toggle button showing enabled/disabled state
-- "DISABLED" overlay on inactive peer cards
-- Modal with full QR code for scanning
+![WireQire Web Interface](Screenshot%20From%202026-01-07%2021-36-31.png)
 
 ## Requirements
 
