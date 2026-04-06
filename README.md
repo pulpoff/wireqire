@@ -18,7 +18,7 @@ A FastAPI web service for generating and managing WireGuard VPN peer configurati
 
 ## Screenshot
 
-![WireQire Web Interface](Screenshot%20From%202026-01-07%2021-36-31.png)
+![WireQire Web Interface](scr.png)
 
 ## Requirements
 
