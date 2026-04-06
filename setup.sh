@@ -1,5 +1,5 @@
 #!/bin/bash
-# WireGuard QR Manager - Installation Script
+# WireQire - Installation Script
 # Run as root: sudo bash setup.sh
 
 set -e
@@ -24,12 +24,12 @@ fi
 
 echo ""
 echo "╔══════════════════════════════════════════════════════════════╗"
-echo "║         WireGuard QR Manager - Installation Script           ║"
+echo "║         WireQire - Installation Script           ║"
 echo "╚══════════════════════════════════════════════════════════════╝"
 echo ""
 
 # Installation directory
-INSTALL_DIR="/opt/wireguard-qr-manager"
+INSTALL_DIR="/opt/wireqire"
 
 # Step 1: Install system dependencies
 print_status "Installing system dependencies..."
@@ -88,7 +88,7 @@ if [ ! -f "$INSTALL_DIR/.env" ]; then
     WG_ENDPOINT="${SERVER_IP}:51820"
     
     cat > $INSTALL_DIR/.env << EOF
-# WireGuard QR Manager Configuration
+# WireQire Configuration
 # Generated on $(date)
 
 WG_INTERFACE=$WG_INTERFACE
@@ -111,9 +111,9 @@ fi
 
 # Step 7: Install systemd service
 print_status "Installing systemd service..."
-cp $INSTALL_DIR/wireguard-qr-manager.service /etc/systemd/system/
+cp $INSTALL_DIR/wireqire.service /etc/systemd/system/
 systemctl daemon-reload
-systemctl enable wireguard-qr-manager
+systemctl enable wireqire
 
 print_success "Systemd service installed"
 
@@ -124,11 +124,11 @@ read -p "Enter your domain name (or 'skip' to configure manually): " DOMAIN
 
 if [ "$DOMAIN" != "skip" ] && [ -n "$DOMAIN" ]; then
     # Update nginx config with domain
-    sed -i "s/vpn.yourdomain.com/$DOMAIN/g" $INSTALL_DIR/nginx/wireguard-qr-manager.conf
+    sed -i "s/vpn.yourdomain.com/$DOMAIN/g" $INSTALL_DIR/nginx/wireqire.conf
     
     # Copy to nginx
-    cp $INSTALL_DIR/nginx/wireguard-qr-manager.conf /etc/nginx/sites-available/wireguard-qr-manager
-    ln -sf /etc/nginx/sites-available/wireguard-qr-manager /etc/nginx/sites-enabled/
+    cp $INSTALL_DIR/nginx/wireqire.conf /etc/nginx/sites-available/wireqire
+    ln -sf /etc/nginx/sites-available/wireqire /etc/nginx/sites-enabled/
     
     # Create basic auth
     print_status "Setting up basic authentication..."
@@ -149,19 +149,19 @@ if [ "$DOMAIN" != "skip" ] && [ -n "$DOMAIN" ]; then
     nginx -t && systemctl reload nginx
 else
     print_warning "Nginx configuration skipped. Manual setup required."
-    print_warning "Copy $INSTALL_DIR/nginx/wireguard-qr-manager.conf to /etc/nginx/sites-available/"
+    print_warning "Copy $INSTALL_DIR/nginx/wireqire.conf to /etc/nginx/sites-available/"
 fi
 
 # Step 9: Start the service
-print_status "Starting WireGuard QR Manager..."
-systemctl start wireguard-qr-manager
+print_status "Starting WireQire..."
+systemctl start wireqire
 
 # Check if running
 sleep 2
-if systemctl is-active --quiet wireguard-qr-manager; then
+if systemctl is-active --quiet wireqire; then
     print_success "Service started successfully!"
 else
-    print_error "Service failed to start. Check logs: journalctl -u wireguard-qr-manager -f"
+    print_error "Service failed to start. Check logs: journalctl -u wireqire -f"
 fi
 
 # Final summary
@@ -175,10 +175,10 @@ print_success "Configuration file: $INSTALL_DIR/.env"
 print_success "Database: $INSTALL_DIR/wireguard_peers.db"
 echo ""
 print_status "Service commands:"
-echo "  Start:   systemctl start wireguard-qr-manager"
-echo "  Stop:    systemctl stop wireguard-qr-manager"
-echo "  Status:  systemctl status wireguard-qr-manager"
-echo "  Logs:    journalctl -u wireguard-qr-manager -f"
+echo "  Start:   systemctl start wireqire"
+echo "  Stop:    systemctl stop wireqire"
+echo "  Status:  systemctl status wireqire"
+echo "  Logs:    journalctl -u wireqire -f"
 echo ""
 
 if [ "$DOMAIN" != "skip" ] && [ -n "$DOMAIN" ]; then

@@ -1,5 +1,5 @@
 [Unit]
-Description=WireGuard QR Manager - FastAPI Service
+Description=WireQire - WireGuard VPN Manager
 After=network.target wg-quick@wg0.service
 Wants=wg-quick@wg0.service
 
@@ -7,11 +7,11 @@ Wants=wg-quick@wg0.service
 Type=simple
 User=root
 Group=root
-WorkingDirectory=/opt/wireguard-qr-manager
-EnvironmentFile=/opt/wireguard-qr-manager/.env
+WorkingDirectory=/opt/wireqire
+EnvironmentFile=/opt/wireqire/.env
 
 # Python virtual environment
-ExecStart=/opt/wireguard-qr-manager/venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 6000
+ExecStart=/opt/wireqire/venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 6000
 
 # Restart policy
 Restart=always
@@ -25,7 +25,7 @@ NoNewPrivileges=false
 # Logging
 StandardOutput=journal
 StandardError=journal
-SyslogIdentifier=wg-qr-manager
+SyslogIdentifier=wireqire
 
 [Install]
 WantedBy=multi-user.target

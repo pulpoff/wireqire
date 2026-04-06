@@ -1,6 +1,6 @@
-# WireGuard QR Manager
+# WireQire
 
-A FastAPI web service for generating and managing WireGuard VPN access QR codes. Create, manage, and distribute WireGuard peer configurations through a mobile-friendly web interface.
+A FastAPI web service for generating and managing WireGuard VPN peer configurations. Create, manage, and distribute WireGuard configs through a mobile-friendly web interface with QR codes and macOS .mobileconfig support.
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Python](https://img.shields.io/badge/python-3.8+-green.svg)
@@ -39,8 +39,8 @@ The interface shows:
 
 ```bash
 # 1. Extract the archive
-unzip wireguard-qr-manager.zip
-cd wireguard-qr-manager
+unzip wireqire.zip
+cd wireqire
 
 # 2. Run setup script (as root)
 sudo bash setup.sh
@@ -68,9 +68,9 @@ sudo apt install -y python3 python3-pip python3-venv wireguard-tools qrencode ng
 
 ```bash
 # Create installation directory
-sudo mkdir -p /opt/wireguard-qr-manager
-sudo cp -r ./* /opt/wireguard-qr-manager/
-cd /opt/wireguard-qr-manager
+sudo mkdir -p /opt/wireqire
+sudo cp -r ./* /opt/wireqire/
+cd /opt/wireqire
 
 # Create virtual environment
 python3 -m venv venv
@@ -141,17 +141,17 @@ sudo cat /etc/wireguard/publickey
 ### Step 5: Setup Systemd Service
 
 ```bash
-sudo cp wireguard-qr-manager.service /etc/systemd/system/
+sudo cp wireqire.service /etc/systemd/system/
 sudo systemctl daemon-reload
-sudo systemctl enable wireguard-qr-manager
-sudo systemctl start wireguard-qr-manager
+sudo systemctl enable wireqire
+sudo systemctl start wireqire
 ```
 
 ### Step 6: Configure Nginx (HTTPS)
 
 ```bash
 # Create HTTP config first
-sudo tee /etc/nginx/sites-available/wireguard-qr-manager << 'EOF'
+sudo tee /etc/nginx/sites-available/wireqire << 'EOF'
 server {
     listen 80;
     server_name your.domain.com;
@@ -176,7 +176,7 @@ server {
 EOF
 
 # Enable site
-sudo ln -sf /etc/nginx/sites-available/wireguard-qr-manager /etc/nginx/sites-enabled/
+sudo ln -sf /etc/nginx/sites-available/wireqire /etc/nginx/sites-enabled/
 
 # Create admin user
 sudo htpasswd -c /etc/nginx/.htpasswd admin
@@ -254,22 +254,22 @@ sudo htpasswd /etc/nginx/.htpasswd existinguser
 
 ```bash
 # Start service
-sudo systemctl start wireguard-qr-manager
+sudo systemctl start wireqire
 
 # Stop service
-sudo systemctl stop wireguard-qr-manager
+sudo systemctl stop wireqire
 
 # Restart service
-sudo systemctl restart wireguard-qr-manager
+sudo systemctl restart wireqire
 
 # View status
-sudo systemctl status wireguard-qr-manager
+sudo systemctl status wireqire
 
 # View logs
-sudo journalctl -u wireguard-qr-manager -f
+sudo journalctl -u wireqire -f
 
 # View last 50 log lines
-sudo journalctl -u wireguard-qr-manager -n 50 --no-pager
+sudo journalctl -u wireqire -n 50 --no-pager
 ```
 
 ---
@@ -283,7 +283,7 @@ If you see "no such column" errors after updating:
 ```bash
 python3 << 'EOF'
 import sqlite3
-conn = sqlite3.connect('/opt/wireguard-qr-manager/wireguard_peers.db')
+conn = sqlite3.connect('/opt/wireqire/wireguard_peers.db')
 cursor = conn.cursor()
 try: cursor.execute("ALTER TABLE peers ADD COLUMN total_rx INTEGER DEFAULT 0")
 except: pass
@@ -295,7 +295,7 @@ conn.commit()
 conn.close()
 print("Done!")
 EOF
-sudo systemctl restart wireguard-qr-manager
+sudo systemctl restart wireqire
 ```
 
 ### Peers Not Connecting
@@ -316,7 +316,7 @@ sudo ufw allow 51820/udp
 
 ```bash
 # Check logs
-sudo journalctl -u wireguard-qr-manager -n 50
+sudo journalctl -u wireqire -n 50
 
 # Common issues:
 # - Missing WG_SERVER_PUBLIC_KEY in .env
@@ -362,7 +362,7 @@ MIT License - feel free to use and modify.
 ## Files Structure
 
 ```
-wireguard-qr-manager/
+wireqire/
 ├── app/
 │   ├── __init__.py
 │   ├── main.py              # FastAPI application
@@ -370,13 +370,11 @@ wireguard-qr-manager/
 │   │   └── index.html       # Web UI template
 │   └── static/
 ├── nginx/
-│   └── wireguard-qr-manager.conf
+│   └── wireqire.conf
 ├── requirements.txt
 ├── setup.sh                 # Automated setup script
 ├── setup-wireguard-server.sh # WireGuard server setup
-├── wireguard-qr-manager.service
+├── wireqire.service
 ├── .env.example
-├── Dockerfile
-├── docker-compose.yml
 └── README.md
 ```

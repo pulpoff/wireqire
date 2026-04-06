@@ -1,5 +1,5 @@
 """
-WireGuard QR Code Manager - FastAPI Service
+WireQire - WireGuard VPN Manager
 Generates and manages WireGuard VPN access QR codes
 """
 
@@ -71,7 +71,7 @@ Base.metadata.create_all(bind=engine)
 
 
 # FastAPI app
-app = FastAPI(title="WireGuard QR Manager", version="1.1.0")
+app = FastAPI(title="WireQire", version="1.1.0")
 
 templates_dir = Path(__file__).parent / "templates"
 templates_dir.mkdir(exist_ok=True)
