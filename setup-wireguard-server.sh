@@ -141,15 +141,15 @@ fi
 # Step 5: Update QR Manager configuration
 print_status "Updating QR Manager configuration..."
 
-QR_MANAGER_ENV="/opt/wireguard-qr-manager/.env"
+QR_MANAGER_ENV="/opt/wireqire/.env"
 if [ -f "$QR_MANAGER_ENV" ]; then
     sed -i "s|^WG_SERVER_PUBLIC_KEY=.*|WG_SERVER_PUBLIC_KEY=$SERVER_PUBLIC_KEY|" $QR_MANAGER_ENV
     sed -i "s|^WG_SERVER_ENDPOINT=.*|WG_SERVER_ENDPOINT=$ENDPOINT|" $QR_MANAGER_ENV
     print_success "Updated $QR_MANAGER_ENV"
     
     # Restart QR Manager
-    if systemctl is-active --quiet wireguard-qr-manager; then
-        systemctl restart wireguard-qr-manager
+    if systemctl is-active --quiet wireqire; then
+        systemctl restart wireqire
         print_success "Restarted QR Manager service"
     fi
 else
