@@ -9,12 +9,14 @@ import secrets
 import io
 import base64
 import re
+import uuid
+import plistlib
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Optional, Dict
 
 from fastapi import FastAPI, HTTPException, Depends, Request, Form
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import create_engine, Column, Integer, String, DateTime, Text, BigInteger
@@ -215,6 +217,67 @@ def create_client_config(private_key: str, ip_address: str, preshared_key: Optio
     return "\n".join(config_lines)
 
 
+def create_mobileconfig(peer) -> bytes:
+    """Generate Apple .mobileconfig profile for WireGuard VPN"""
+    wg_config = {
+        "Interface": {
+            "PrivateKey": peer.private_key,
+            "Address": peer.ip_address,
+            "DNS": [d.strip() for d in config.WG_DNS.split(",")],
+        },
+        "Peers": [
+            {
+                "PublicKey": config.WG_SERVER_PUBLIC_KEY,
+                "AllowedIPs": [a.strip() for a in config.WG_ALLOWED_IPS.split(",")],
+                "Endpoint": config.WG_SERVER_ENDPOINT,
+                "PersistentKeepalive": 25,
+            }
+        ],
+    }
+    if peer.preshared_key:
+        wg_config["Peers"][0]["PresharedKey"] = peer.preshared_key
+
+    # Build the INI-style config string that the WireGuard profile payload expects
+    conf_lines = [
+        "[Interface]",
+        f"PrivateKey = {wg_config['Interface']['PrivateKey']}",
+        f"Address = {wg_config['Interface']['Address']}",
+        f"DNS = {', '.join(wg_config['Interface']['DNS'])}",
+        "",
+        "[Peer]",
+        f"PublicKey = {wg_config['Peers'][0]['PublicKey']}",
+        f"AllowedIPs = {', '.join(wg_config['Peers'][0]['AllowedIPs'])}",
+        f"Endpoint = {wg_config['Peers'][0]['Endpoint']}",
+        f"PersistentKeepalive = {wg_config['Peers'][0]['PersistentKeepalive']}",
+    ]
+    if peer.preshared_key:
+        conf_lines.insert(-1, f"PresharedKey = {peer.preshared_key}")
+
+    tunnel_name = peer.name or f"WireGuard-{peer.id}"
+
+    vpn_payload = {
+        "PayloadType": "com.wireguard.ios",
+        "PayloadIdentifier": f"com.wireguard.ios.conf.{peer.id}",
+        "PayloadUUID": str(uuid.uuid5(uuid.NAMESPACE_DNS, f"wg-peer-{peer.id}")),
+        "PayloadDisplayName": tunnel_name,
+        "PayloadVersion": 1,
+        "WgQuickConfig": "\n".join(conf_lines),
+    }
+
+    profile = {
+        "PayloadType": "Configuration",
+        "PayloadIdentifier": f"com.wireguard.ios.profile.{peer.id}",
+        "PayloadUUID": str(uuid.uuid5(uuid.NAMESPACE_DNS, f"wg-profile-{peer.id}")),
+        "PayloadDisplayName": f"WireGuard VPN - {tunnel_name}",
+        "PayloadDescription": f"WireGuard VPN configuration for {tunnel_name}",
+        "PayloadOrganization": "WireGuard",
+        "PayloadVersion": 1,
+        "PayloadContent": [vpn_payload],
+    }
+
+    return plistlib.dumps(profile, fmt=plistlib.FMT_XML)
+
+
 def add_peer_to_wireguard(public_key: str, ip_address: str, preshared_key: Optional[str] = None):
     try:
         cmd = ["wg", "set", config.WG_INTERFACE, "peer", public_key, "allowed-ips", ip_address]
@@ -393,6 +456,22 @@ async def get_peer(peer_id: int, db: Session = Depends(get_db)):
         "rx_formatted": format_bytes(stats.get('rx_bytes', 0)),
         "tx_formatted": format_bytes(stats.get('tx_bytes', 0))
     }
+
+
+@app.get("/api/peers/{peer_id}/mobileconfig")
+async def get_peer_mobileconfig(peer_id: int, db: Session = Depends(get_db)):
+    peer = db.query(Peer).filter(Peer.id == peer_id).first()
+    if not peer:
+        raise HTTPException(status_code=404, detail="Peer not found")
+
+    mobileconfig_data = create_mobileconfig(peer)
+    filename = f"{peer.name or f'peer-{peer.id}'}.mobileconfig"
+
+    return Response(
+        content=mobileconfig_data,
+        media_type="application/x-apple-aspen-config",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 @app.delete("/api/peers/{peer_id}")
